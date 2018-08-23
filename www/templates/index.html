@@ -1,0 +1,98 @@
+{% extends '__admin_base__.html' %}
+
+{% block title %}用户管理{% endblock %}
+
+{% block beforehead %}
+
+<script>
+function initVM(data) {
+    $('#vm').show();
+    var vm = new Vue({
+        el: '#vm',
+        data: {
+            users: data.users,
+            page: data.page
+        },
+        methods:{
+            user_edit: function (user) {
+                location.assign('/user/edit?id=' + user.id);
+            },
+            user_action: function (user) {
+                var status = 1;
+                if (confirm('确认要封禁用户“' + user.name + '”吗？')) {
+                    status = 3
+                }
+                postJSON('/api/user/' + user.id + '/action/' + status , function (err, r) {
+                        if (err) {
+                            return alert(err.message || err.error || err);
+                        }
+                        refresh();
+                    });
+            }
+        }
+    });
+}
+$(function() {
+    getJSON('/api/users', {
+        page: {{ page_index }}
+    }, function (err, results) {
+        if (err) {
+            return fatal(err);
+        }
+        $('#loading').hide();
+        initVM(results);
+    });
+});
+</script>
+
+{% endblock %}
+
+{% block content %}
+
+    <div id="error" class="uk-width-1-1"></div>
+
+    <div id="loading" class="uk-width-1-1 uk-text-center">
+        <span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i> 正在加载...</span>
+    </div>
+
+    <div id="vm" class="uk-width-1-1">
+        <table class="uk-table uk-table-hover">
+            <thead>
+                <tr>
+                    <th class="uk-width-1-10">名字</th>
+                    <th class="uk-width-2-10">电子邮件</th>
+                    <th class="uk-width-2-10">手机号</th>
+                    <th class="uk-width-2-10">注册时间</th>
+                    <th class="uk-width-1-10">状态</th>
+                    <th class="uk-width-2-10" style="text-align: center;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-repeat="user: users" >
+                    <td>
+                         <a target="_blank" v-attr="href: '/user/'+user.id" v-text="user.name"></a>
+                        <span v-if="user.admin" style="color:#d05"><i class="uk-icon-key"></i> 管理员</span>
+                    </td>
+                    <td>
+                        <a v-attr="href: 'mailto:'+user.email" v-text="user.email"></a>
+                    </td>
+                    <td>
+                        <span v-text="user.phone"></span>
+                    </td>
+                    <td>
+                        <span v-text="user.created_at.toDateTime()"></span>
+                    </td>
+                    <td>
+                        <span v-text="user.status"></span>
+                    </td>
+                    <td style="text-align: center;">
+                        <a href="#0" v-on="click: user_edit(user)"><i class="uk-icon-edit"></i> &nbsp;·&nbsp;
+                        <a href="#0" v-on="click: user_action(user)"><i class="uk-icon-magnet"></i>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div v-component="pagination" v-with="page"></div>
+    </div>
+
+{% endblock %}
